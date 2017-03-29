@@ -1,0 +1,24 @@
+{
+  "$schema": "http://json-schema.org/draft-04/schema#",
+  "title": "User content part",
+  "description": "User content part",
+  "type": "object",
+  "properties": {
+    "id": {
+      "type": "string",
+      "minLength": 20,
+      "maxLength": 40,
+      "pattern": "^[a-zA-Z0-9]+$"
+    },
+    "stars": {
+      "type": "integer",
+      "minimum": 0,
+      "maximum": 5
+    },
+    "comment": {
+      "type": "string",
+      "maxLength": 1024
+    }
+  },
+  "required": ["id", "stars", "comment"]
+}

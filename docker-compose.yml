@@ -1,0 +1,142 @@
+version: '2'
+services:
+
+  redis-cache-evict-master:
+    build:
+      context: ./redis-cache-evict
+    command: redis-server /usr/local/etc/redis/redis.conf
+    networks:
+      develop:
+        ipv4_address: 172.18.0.2
+    ports:
+      - "172.18.0.2:6379:6379"
+
+  redis-cache-evict-slave:
+    build:
+      context: ./redis-cache-evict
+    command: redis-server /usr/local/etc/redis/redis.conf --slaveof redis-cache-evict-master 6379
+    depends_on:
+      - redis-cache-evict-master
+    networks:
+      develop:
+        ipv4_address: 172.18.0.3
+    ports:
+      - "172.18.0.3:6379:6379"
+
+  redis-sentinel:
+    build: 
+      context: ./redis-sentinel
+    depends_on:
+      - redis-cache-evict-master
+      - redis-cache-evict-slave
+    networks:
+      develop:
+        ipv4_address: 172.18.0.4
+    ports:
+      - "172.18.0.4:26379:26379"
+
+  redis-sentinel-2:
+    build: 
+      context: ./redis-sentinel
+    depends_on:
+      - redis-cache-evict-master
+      - redis-cache-evict-slave
+    networks:
+      develop:
+        ipv4_address: 172.18.0.5
+    ports:
+      - "172.18.0.5:26379:26379"
+
+  redis-sentinel-3:
+    build: 
+      context: ./redis-sentinel
+    depends_on:
+      - redis-cache-evict-master
+      - redis-cache-evict-slave
+    networks:
+      develop:
+        ipv4_address: 172.18.0.6
+    ports:
+      - "172.18.0.6:26379:26379"
+    
+  mongodb-master:
+    build:
+      context: ./mongodb-replica-set
+    networks:
+      develop:
+        ipv4_address: 172.18.0.7
+    ports:
+      - "172.18.0.7:27017:27017"
+    environment:
+      ROLE: master
+      REPLNAME: ratingservice
+      BASE: ratingservice
+      INITIALIZE: "yes"
+
+  mongodb-slave:
+    build:
+      context: ./mongodb-replica-set
+    depends_on:
+      - mongodb-master
+    networks:
+      develop:
+        ipv4_address: 172.18.0.8
+    ports:
+      - "172.18.0.8:27017:27017"
+    environment:
+      REPLNAME: ratingservice
+
+  mongodb-arbiter:
+    build:
+      context: ./mongodb-arbiter
+    depends_on:
+      - mongodb-master
+    networks:
+      develop:
+        ipv4_address: 172.18.0.9
+    ports:
+      - "172.18.0.9:27017:27017"
+    environment:
+      REPLNAME: ratingservice
+
+  auth-service:
+    build:
+      context: ./auth-service
+    depends_on:
+      - mongodb-master
+    networks:
+      develop:
+        ipv4_address: 172.18.0.10
+    ports:
+      - "172.18.0.10:8090:8090"
+
+  kinopoisk-service:
+    build:
+      context: ./kinopoisk-service
+    networks:
+      develop:
+        ipv4_address: 172.18.0.11
+    ports:
+      - "172.18.0.11:8081:8081"
+
+  rating-service:
+    build:
+      context: ./rating-service
+    depends_on:
+      - mongodb-master
+      - redis-cache-evict-master
+      - redis-sentinel
+    networks:
+      develop:
+        ipv4_address: 172.18.0.12
+    ports:
+      - "172.18.0.12:8080:8080"
+
+networks:
+  develop:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      - subnet: 172.18.0.0/16
+        gateway: 172.18.0.1

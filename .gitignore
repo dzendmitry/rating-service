@@ -1,0 +1,4 @@
+tests/*
+auth-service/auth-service
+kinopoisk-service/kinopoisk-service
+rating-service/rating-service
