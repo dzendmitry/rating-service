@@ -7,5 +7,8 @@ build:
 docker: build
 	docker build --no-cache=true -t dzendmitry/$(SERVICE):$(VERSION) -f ./Dockerfile .
 
+push: docker
+	docker push dzendmitry/$(SERVICE):$(VERSION)
+
 clean:
 	rm $(SERVICE)

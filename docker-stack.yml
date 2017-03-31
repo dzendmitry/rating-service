@@ -1,15 +1,142 @@
 version: "3"
 services:
 
-
-  
   visualizer:
     image: dockersamples/visualizer:stable
     ports:
-      - "8080:8080"
+      - "9000:8080"
     stop_grace_period: 1m30s
     volumes:
       - "/var/run/docker.sock:/var/run/docker.sock"
     deploy:
       placement:
         constraints: [node.role == manager]
+
+  redis-cache-evict-master:
+    image: dzendmitry/redis-cache-evict:0.0.1
+    command: redis-server /usr/local/etc/redis/redis.conf
+    deploy:
+      placement:
+        constraints: [node.role == machine1]
+    ports:
+      - "6379:6379"
+
+  redis-cache-evict-slave:
+    image: dzendmitry/redis-cache-evict:0.0.1
+    command: redis-server /usr/local/etc/redis/redis.conf --slaveof redis-cache-evict-master 6379
+    depends_on:
+      - redis-cache-evict-master
+    deploy:
+      placement:
+        constraints: [node.role == machine3]
+    ports:
+      - "6379:6379"
+
+  redis-sentinel:
+    image: dzendmitry/redis-sentinel:0.0.1
+    depends_on:
+      - redis-cache-evict-master
+      - redis-cache-evict-slave
+    deploy:
+      placement:
+        constraints: [node.role == machine1]
+    ports:
+      - "26379:26379"
+
+  redis-sentinel-2:
+    image: dzendmitry/redis-sentinel:0.0.1
+    depends_on:
+      - redis-cache-evict-master
+      - redis-cache-evict-slave
+    deploy:
+      placement:
+        constraints: [node.role == machine2]
+    ports:
+      - "26379:26379"
+
+  redis-sentinel-3:
+    image: dzendmitry/redis-sentinel:0.0.1
+    depends_on:
+      - redis-cache-evict-master
+      - redis-cache-evict-slave
+    deploy:
+      placement:
+        constraints: [node.role == machine3]
+    ports:
+      - "26379:26379"
+
+  mongodb-master:
+    image: dzendmitry/mongodb-replica-set:0.0.1
+    environment:
+      ROLE: master
+      REPLNAME: ratingservice
+      BASE: ratingservice
+      INITIALIZE: "yes"
+    deploy:
+      placement:
+        constraints: [node.role == machine1]
+    ports:
+      - "27017:27017"
+
+  mongodb-slave:
+    image: dzendmitry/mongodb-replica-set:0.0.1
+    depends_on:
+      - mongodb-master
+    environment:
+      REPLNAME: ratingservice
+    deploy:
+      placement:
+        constraints: [node.role == machine2]
+    ports:
+      - "27017:27017"
+
+  mongodb-arbiter:
+    image: dzendmitry/mongo-arbiter:0.0.1
+    depends_on:
+      - mongodb-master
+    environment:
+      REPLNAME: ratingservice
+    deploy:
+      placement:
+        constraints: [node.role == machine3]
+    ports:
+      - "27017:27017"
+
+  auth-service:
+    image: dzendmitry/auth-service:0.0.1
+    depends_on:
+      - mongodb-master
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8090:8090"
+
+  kinopoisk-service:
+    image: dzendmitry/kinopoisk-service:0.0.1
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8081:8081"
+
+  rating-service:
+    image: dzendmitry/rating-service:0.0.1
+    depends_on:
+      - mongodb-master
+      - redis-cache-evict-master
+      - redis-sentinel
+    deploy:
+      replicas: 2
+      update_config:
+        parallelism: 2
+      restart_policy:
+        condition: on-failure
+    ports:
+      - "8080:8080"

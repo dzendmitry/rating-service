@@ -45,5 +45,5 @@ func main() {
 	h := parser_service.NewParser(md5Hash, NewKinopoisk(log), log)
 
 	http.HandleFunc(parser_service.FindUri(), h.FindHandler)
-	log.Panicf("%+v", http.ListenAndServe(httpHost + ":" + httpPort, nil))
+	log.Panicf("%+v", http.ListenAndServe(":" + httpPort, nil))
 }
