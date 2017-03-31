@@ -7,4 +7,4 @@ Parsers are presented as separated microservices and discovered by rating servic
 Another one microservice is for users authentication. It communicates only with Mongo db storage.
 Sessions mechanism is implemented using Mongodb TTL indexes.
 ... and of course Docker for testing and deployment.
-![Scheme(/scheme.png)
+![Scheme](https://github.com/dzendmitry/rating-service/blob/master/scheme.png)
